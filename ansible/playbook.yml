@@ -8,7 +8,22 @@
         dest: "/opt/tomcat/webapps/MavenAnsibleWebApp2.war"
         remote_src: no
 
-    - name: Restart Tomcat
-      systemd:
-        name: tomcat
-        state: restarted
+    - name: Stop Tomcat (ignore if not running)
+      shell: /opt/tomcat/bin/shutdown.sh
+      register: stop_tomcat
+      failed_when: false
+
+    - name: Wait for Tomcat to shut down
+      wait_for:
+        path: /opt/tomcat/temp/tomcat.pid
+        state: absent
+        timeout: 30
+
+    - name: Start Tomcat
+      shell: /opt/tomcat/bin/startup.sh
+
+    - name: Wait for Tomcat port to be open
+      wait_for:
+        port: 9090
+        host: localhost
+        timeout: 30
