@@ -1,14 +1,15 @@
 pipeline {
-    agent any  // Use any available agent
-
+    agent any
 
     tools {
         maven 'Maven'  // Ensure this matches the name configured in Jenkins
     }
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/icemberg/MavenAnsibleWebApp2.git'
+                git branch: 'main',
+                    url: 'https://github.com/icemberg/MavenAnsibleWebApp2.git'
             }
         }
 
@@ -18,18 +19,26 @@ pipeline {
             }
         }
 
-     stage('Archive') {
+        stage('Archive') {
             steps {
-                archiveArtifacts artifacts: 'target/MavenAnsibleWebApp.war', fingerprint:true
+                archiveArtifacts artifacts: 'target/MavenAnsibleWebApp.war',
+                                 fingerprint: true
             }
         }
+
         stage('Deploy') {
             steps {
-               sh 'ansible-playbook ansible/playbook.yml -i ansible/hosts.ini --ask-become-pass'
+                // Inject the SUDO password into the SUDO_PASS env var
+                withCredentials([string(credentialsId: 'SUDO_PASSWORD', variable: 'SUDO_PASS')]) {
+                    sh '''
+                      # Pass the become password via extra-vars to Ansible
+                      ansible-playbook ansible/playbook.yml \
+                        -i ansible/hosts.ini \
+                        -e ansible_become_pass="$SUDO_PASS"
+                    '''
+                }
             }
         }
-
-                  
     }
+}
 
-   }
